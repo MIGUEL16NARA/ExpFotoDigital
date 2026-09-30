@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legado de Sycamore Gap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Spectral:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* Interfaz tipo visor: barra superior + diapositivas responsivas + barra de progreso por partes.
+   Cada parte (expositor) tiene su color: p1 teal, p2 azul, p3 ámbar. */
+:root{
+  --paper:#EDF3F2; --paper-2:#DDE9E7; --card:#F8FBFA; --ink:#0A2E32; --ink-2:#48656A; --rule:#BACFCC;
+  --p1:#00767A; --p1-soft:#CDE6E4; --p2:#355E9C; --p2-soft:#D6E1F1; --p3:#A0690F; --p3-soft:#F1E1C2;
+  --brk:#B3261E; --brk-soft:#F5D6D2; --fig:#FFFFFF; --net:rgba(0,118,122,.085);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --serif:"Spectral",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#061A1C; --paper-2:#0D292B; --card:#0B2326; --ink:#E1EFEE; --ink-2:#98B7B5; --rule:#1E4043;
+    --p1:#4EC7BF; --p1-soft:#0F3A3A; --p2:#86ABE3; --p2-soft:#1C2D46; --p3:#E3AE55; --p3-soft:#3B2E17;
+    --brk:#F27A70; --brk-soft:#40201E; --fig:#F4F7F6; --net:rgba(78,199,191,.08); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#061A1C; --paper-2:#0D292B; --card:#0B2326; --ink:#E1EFEE; --ink-2:#98B7B5; --rule:#1E4043;
+  --p1:#4EC7BF; --p1-soft:#0F3A3A; --p2:#86ABE3; --p2-soft:#1C2D46; --p3:#E3AE55; --p3-soft:#3B2E17;
+  --brk:#F27A70; --brk-soft:#40201E; --fig:#F4F7F6; --net:rgba(78,199,191,.08); color-scheme:dark;
+}
+html{height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:clamp(15px,min(1.15vw + 8px,1.9vh + 5px),21px);line-height:1.6;overflow:hidden}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--p2);outline-offset:3px;border-radius:4px}
+
+/* fondo de red geodésica */
+.net{position:fixed;inset:0;width:100%;height:100%;color:var(--net);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.badge{display:inline-grid;place-items:center;background:#F6FAF9;border-radius:50%;box-shadow:0 0 0 1px var(--rule)}
+.badge img{display:block;width:78%;height:auto}
+
+/* barras */
+.topbar{display:flex;align-items:center;gap:1rem;padding:.7rem clamp(1rem,3vw,2.5rem);font-family:var(--display);font-size:.78rem;color:var(--ink-2);border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--paper) 88%,transparent)}
+.topbar .badge{width:2.4rem;height:2.4rem;flex:0 0 auto}
+.topbar .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-stretch:115%;color:var(--ink);font-size:.9rem;white-space:nowrap}
+.topbar .part{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.topbar .count{font-variant-numeric:tabular-nums;white-space:nowrap}
+.clock{font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:.45rem}
+.clock .st{font-weight:700;border-radius:999px;padding:.1rem .55rem}
+.st.ok{background:var(--p1-soft);color:var(--p1)}.st.late{background:var(--brk-soft);color:var(--brk)}.st.early{background:var(--p2-soft);color:var(--p2)}
+.iconbtn{background:none;border:1px solid var(--rule);border-radius:999px;min-width:2.1rem;height:2.1rem;display:grid;place-items:center;cursor:pointer;color:var(--ink);padding:0 .6rem;font-family:var(--display);font-weight:700;font-size:.75rem}
+.iconbtn:hover{border-color:var(--ink-2)}
+.iconbtn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.deck{flex:1;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s .35s;-webkit-overflow-scrolling:touch}
+.slide.active{visibility:visible;opacity:1;transition:opacity .35s ease}
+.frame{max-width:1240px;margin:0 auto;min-height:100%;padding:clamp(1.2rem,3.2vw,2.8rem) clamp(1.2rem,4vw,3.5rem);display:flex;flex-direction:column;justify-content:center}
+.notes{display:none}
+.bottombar{display:flex;align-items:center;gap:.8rem;padding:.6rem clamp(1rem,3vw,2.5rem);border-top:1px solid var(--rule);background:color-mix(in srgb,var(--paper) 88%,transparent)}
+.progress{flex:1;display:flex;gap:6px;align-items:center}
+.seg{flex:var(--n,1);height:8px;border-radius:2px;background:var(--paper-2);position:relative;overflow:hidden;cursor:pointer;border:0;padding:0}
+.seg i{position:absolute;inset:0;width:var(--fill,0%);background:var(--c,var(--ink));transition:width .35s ease}
+.seg:hover{outline:1px solid var(--ink-2)}
+.navbtn{font-family:var(--display);font-weight:700;font-size:.85rem;border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:999px;padding:.45rem 1.1rem;cursor:pointer}
+.navbtn.ghost{background:transparent;color:var(--ink)}
+.navbtn:disabled{opacity:.35;cursor:default}
+
+/* guion */
+.guion{border-top:3px solid var(--ink);background:var(--card);max-height:38vh;overflow-y:auto;padding:1rem clamp(1rem,3vw,2.5rem)}
+.guion .gh{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;font-family:var(--display);font-size:.8rem;color:var(--ink-2);margin-bottom:.5rem}
+.guion .gh b{color:var(--ink)}
+.guion .gt{font-size:1rem;max-width:80ch}
+.guion .gt p{margin:0 0 .6em}
+
+/* tipografía */
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:clamp(2.4rem,min(6vw,9vh),5.2rem);font-weight:900;font-stretch:118%}
+h2{font-size:clamp(1.6rem,min(3.4vw,5.2vh),3rem);font-weight:800;font-stretch:112%;margin-bottom:.4em}
+h3{font-size:clamp(1.05rem,1.5vw,1.35rem);font-weight:700;font-stretch:105%;margin-bottom:.3em}
+p{margin:0 0 .8em;max-width:68ch}
+.lede{font-size:1.15em;color:var(--ink-2);max-width:60ch}
+.sec{font-family:var(--display);font-weight:600;font-stretch:90%;color:var(--ink-2);font-size:.95rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.small{font-size:.86em;color:var(--ink-2)}
+strong,b{font-weight:700}
+.num{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.c1{color:var(--p1)}.c2{color:var(--p2)}.c3{color:var(--p3)}.cb{color:var(--brk)}
+
+/* rejillas */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.2rem,3vw,3rem);align-items:center}
+.grid2.wide-l{grid-template-columns:1.1fr .9fr}
+.grid2.wide-r{grid-template-columns:.85fr 1.15fr}
+.grid2>*{min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem}
+@media (max-width:860px){.grid2,.grid2.wide-l,.grid2.wide-r,.grid3{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:1.1rem 1.25rem}
+.panel p:last-child{margin-bottom:0}
+.panel .k{font-family:var(--display);font-weight:700;font-size:.8rem;color:var(--c,var(--ink-2));display:block;margin-bottom:.25rem}
+.band{border-left:5px solid var(--c,var(--ink));padding:.2rem 0 .2rem 1rem}
+.stack>*+*{margin-top:1rem}
+.mt{margin-top:1.3rem}
+
+/* figuras del artículo */
+.fig{margin:0}
+.fig img{display:block;width:100%;max-height:min(54vh,540px);object-fit:contain;background:var(--fig);border:1px solid var(--rule);border-radius:8px;padding:.5rem}
+.fig.tall img{max-height:min(62vh,600px)}
+.fig figcaption{font-family:var(--display);font-size:.74rem;color:var(--ink-2);margin-top:.45rem;line-height:1.4}
+.fig figcaption i{font-style:normal;opacity:.75}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--display);font-size:.8rem;font-weight:600;border-radius:999px;padding:.25rem .75rem;background:var(--paper-2);color:var(--ink)}
+.chip.p1{background:var(--p1-soft);color:var(--p1)}.chip.p2{background:var(--p2-soft);color:var(--p2)}.chip.p3{background:var(--p3-soft);color:var(--p3)}
+.people{display:flex;gap:.6rem;flex-wrap:wrap}
+
+/* portada */
+.career{font-family:var(--display);font-weight:700;font-stretch:108%;color:var(--p1);font-size:.95rem;display:flex;align-items:center;gap:.9rem;margin-bottom:1.3rem}
+.career .badge{width:4.2rem;height:4.2rem}
+.cover{display:grid;grid-template-columns:1.1fr .9fr;gap:2.5rem;align-items:center}
+.cover>*{min-width:0}
+@media (max-width:860px){.cover{grid-template-columns:1fr}}
+.cover h1 span{display:block;font-size:.33em;font-weight:600;font-stretch:100%;color:var(--ink-2);letter-spacing:0;margin-bottom:.45em}
+.cover .orig{font-style:italic;color:var(--ink-2);font-size:.92em;max-width:56ch;margin-top:1rem}
+.cover .meta{font-family:var(--display);font-size:.78rem;color:var(--ink-2);margin-top:1.2rem;line-height:1.7}
+.legend{display:flex;flex-wrap:wrap;gap:1.1rem;margin-top:1.1rem;font-family:var(--display);font-size:.85rem}
+.legend span{display:inline-flex;align-items:center;gap:.45rem}
+.legend i{width:18px;height:12px;display:inline-block;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 25%,transparent)}
+.scene svg{width:100%;height:auto;display:block}
+.draw{stroke-dasharray:900;stroke-dashoffset:900;animation:draw 2.2s cubic-bezier(.6,.1,.2,1) forwards}
+.fillin{opacity:0;animation:fade .8s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fade{to{opacity:1}}
+
+/* ruta */
+.route{list-style:none;margin:1.4rem 0 0;padding:0;border-top:1px solid var(--rule)}
+.route li{border-bottom:1px solid var(--rule)}
+.route button{all:unset;cursor:pointer;display:grid;grid-template-columns:4.5rem 1fr 1.3fr 6.5rem;gap:1rem;align-items:baseline;padding:1rem .3rem;width:100%;box-sizing:border-box}
+.route button:hover .rt{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.route button:focus-visible{outline:3px solid var(--p2)}
+.route .rn{font-family:var(--display);font-weight:900;font-stretch:125%;font-size:2.2rem;line-height:1;color:var(--c)}
+.route .rt{font-family:var(--display);font-weight:700;font-size:1.2rem}
+.route .rt small{display:block;font-weight:600;font-size:.8rem;color:var(--c);margin-top:.2rem}
+.route .rd{color:var(--ink-2);font-size:.95rem}
+.route .rtime{font-family:var(--display);font-weight:700;font-size:.85rem;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:760px){.route button{grid-template-columns:3rem 1fr}.route .rd,.route .rtime{grid-column:2;text-align:left}}
+
+/* separadores */
+.divider{display:grid;grid-template-columns:auto 1fr;gap:clamp(1rem,4vw,4rem);align-items:center}
+.divider>*{min-width:0}
+.divider .bignum{font-family:var(--display);font-weight:900;font-stretch:125%;font-size:clamp(9rem,26vw,22rem);line-height:.8;color:transparent;-webkit-text-stroke:3px var(--c);position:relative}
+.divider .bignum::after{content:attr(data-n);position:absolute;inset:0;color:var(--c);clip-path:inset(62% 0 0 0);-webkit-text-stroke:0}
+.divider h2{font-size:clamp(2.2rem,5vw,4.4rem)}
+.divider .of{font-family:var(--display);color:var(--ink-2);font-size:1rem;margin-bottom:.8rem}
+.divider .rub{font-family:var(--display);font-size:.85rem;color:var(--ink-2);margin-top:1rem}
+@media (max-width:700px){.divider{grid-template-columns:1fr}}
+
+/* listas */
+.ticks{list-style:none;padding:0;margin:0}
+.ticks li{padding:.45rem 0 .45rem 1.8rem;position:relative;border-bottom:1px dashed var(--rule)}
+.ticks li:last-child{border:0}
+.ticks li::before{content:"";position:absolute;left:0;top:.95rem;width:.9rem;height:.9rem;border:2px solid var(--c,var(--p1));transform:rotate(45deg) scale(.7)}
+.steps{list-style:none;margin:1rem 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;counter-reset:s}
+.steps li{counter-increment:s;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:.9rem 1rem .9rem 3.4rem;position:relative;font-size:.93rem;line-height:1.45}
+.steps li::before{content:counter(s);position:absolute;left:.9rem;top:.7rem;font-family:var(--display);font-weight:900;font-stretch:120%;font-size:1.8rem;color:var(--p2);line-height:1}
+.steps li b{font-family:var(--display);display:block;font-size:1.05rem}
+.steps li .tool{display:block;font-family:var(--display);font-size:.75rem;font-weight:600;color:var(--p2);margin-top:.35rem}
+@media (max-width:860px){.steps{grid-template-columns:1fr}}
+.checks{counter-reset:c;list-style:none;padding:0;margin:0}
+.checks li{counter-increment:c;padding-left:2rem;position:relative;margin-bottom:.45rem}
+.checks li::before{content:counter(c);position:absolute;left:0;top:.2rem;width:1.4rem;height:1.4rem;border-radius:50%;background:var(--ink);color:var(--paper);font-family:var(--display);font-size:.75rem;font-weight:800;display:grid;place-items:center}
+
+/* sello */
+.stamp{display:inline-block;margin-top:.5rem;font-family:var(--display);font-weight:800;font-stretch:110%;color:var(--brk);border:3px double var(--brk);border-radius:6px;padding:.45rem .9rem;transform:rotate(-2deg);background:color-mix(in srgb,var(--brk-soft) 45%,transparent);line-height:1.3}
+.stamp.ok{color:var(--p1);border-color:var(--p1);background:color-mix(in srgb,var(--p1-soft) 50%,transparent)}
+
+/* cifras */
+.triad{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--card)}
+.triad>div{padding:1.2rem 1.1rem;border-right:1px solid var(--rule)}
+.triad>div:last-child{border-right:0}
+.triad b{font-family:var(--display);font-weight:900;font-stretch:120%;font-size:clamp(1.8rem,3.4vw,2.8rem);display:block;color:var(--c,var(--p3));line-height:1;font-variant-numeric:tabular-nums}
+.triad b small{font-size:.45em;font-weight:700;margin-left:.15em}
+.triad em{font-family:var(--display);font-style:normal;font-size:.8rem;color:var(--ink-2);display:block;margin-top:.45rem;line-height:1.35}
+.triad .muted b{color:var(--ink-2)}
+@media (max-width:700px){.triad{grid-template-columns:1fr}.triad>div{border-right:0;border-bottom:1px solid var(--rule)}}
+
+/* barras de resultados */
+.bars{display:flex;flex-direction:column;gap:.9rem;margin:1rem 0 .4rem}
+.bar{display:grid;grid-template-columns:minmax(9rem,13rem) 1fr;gap:1rem;align-items:center}
+.bar .lab{font-family:var(--display);font-weight:700;font-size:.92rem;line-height:1.2}
+.bar .lab small{display:block;font-weight:500;color:var(--ink-2);font-size:.75rem}
+.bar .track{height:2.3rem;background:var(--paper-2);border-radius:4px;position:relative;overflow:hidden}
+.bar .fill{position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--ink-2);display:flex;align-items:center;justify-content:flex-end;padding-right:.7rem;color:var(--paper);font-family:var(--display);font-weight:800;font-size:1rem;font-variant-numeric:tabular-nums}
+.bar .fill.win{background:var(--p3)}
+.bars .axis{display:flex;justify-content:space-between;font-family:var(--display);font-size:.72rem;color:var(--ink-2);margin-left:calc(min(13rem,30%) + 1rem)}
+@media (max-width:600px){.bar{grid-template-columns:1fr}.bars .axis{margin-left:0}}
+
+/* tabla */
+.tbl{width:100%;border-collapse:collapse;font-size:.95rem;background:var(--card);border:1px solid var(--rule)}
+.tbl th,.tbl td{text-align:right;padding:.6rem .85rem;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{font-family:var(--display);font-weight:700;font-size:.82rem;background:var(--paper-2);border-top:5px solid var(--p3)}
+.tbl td{font-family:var(--display);font-weight:600}
+.scrollx{overflow-x:auto}
+
+/* épocas */
+.tl{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem}
+.tl>div{border-top:6px solid var(--c);background:var(--card);border-radius:0 0 10px 10px;border-left:1px solid var(--rule);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:.8rem 1rem;font-size:.92rem;line-height:1.4}
+.tl b{display:block;font-family:var(--display);font-weight:900;font-stretch:115%;font-size:1.35rem;color:var(--c)}
+@media (max-width:700px){.tl{grid-template-columns:1fr}}
+
+/* preguntas volteables */
+.flips{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.9rem;margin-top:1rem}
+.flip{all:unset;cursor:pointer;display:block;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:1rem 1.1rem 1.8rem;min-height:8.5rem;position:relative;box-sizing:border-box;font-size:.95rem;line-height:1.45}
+.flip:focus-visible{outline:3px solid var(--p2)}
+.flip .q::before{content:"Pregunta · " attr(data-who);display:block;font-family:var(--display);font-weight:700;font-size:.72rem;color:var(--p2);margin-bottom:.3rem}
+.flip .q{font-style:italic;font-size:1.02rem}
+.flip .a{display:none}
+.flip .a::before{content:"Respuesta";display:block;font-family:var(--display);font-weight:700;font-size:.72rem;color:var(--p1);margin-bottom:.3rem}
+.flip .hint{position:absolute;right:1rem;bottom:.6rem;font-family:var(--display);font-size:.7rem;color:var(--ink-2)}
+.flip[aria-expanded="true"]{border-color:var(--p1);background:color-mix(in srgb,var(--p1-soft) 45%,var(--card))}
+.flip[aria-expanded="true"] .q{display:none}
+.flip[aria-expanded="true"] .a{display:block}
+.flip[aria-expanded="true"] .hint{display:none}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.9rem 2rem;margin-top:1rem}
+.gloss div{border-top:1px solid var(--rule);padding-top:.6rem;font-size:.95rem;line-height:1.45}
+.gloss b{display:block;font-family:var(--display);font-weight:800;font-stretch:110%;font-size:1.1rem;color:var(--p2)}
+
+/* cierre */
+.bigq{font-size:clamp(3rem,9vw,7.5rem)}
+@media (max-width:760px){.topbar .clock-t,.topbar .count{display:none}}
+@media (max-width:520px){#fsBtn,.topbar .brand-t{display:none}.topbar{gap:.5rem}}
+@media (prefers-reduced-motion:reduce){
+  .draw{animation:none;stroke-dashoffset:0}.fillin{animation:none;opacity:1}
+  .slide,.slide.active,.seg i{transition:none}
+}
+</style>
+</head>
+<body>
+<svg class="net" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M340 125L511 35M1584 594L1588 752M1397 264L1584 307M493 610L673 574M1009 274L965 488M871 -20L1066 14M1235 434L1397 264M229 179L185 349M903 490L1009 274M813 793L856 868M701 415L903 490M963 887L1173 752M185 349L363 420M356 1L1134 -38M489 865L736 872M340 125L461 304M673 574L858 565M324 550L380 715M1066 14L1246 166M1350 482L1511 427M-59 482L-29 895M356 1L340 125M-24 728L114 751M185 349L136 416M15 40L171 5M363 420L461 304M33 123L229 179M340 125L281 269M-29 895L166 942M999 775L963 887M1066 14L1028 138M668 710L813 793M1246 166L1318 43M1181 302L1301 175M114 751L312 938M737 159L895 166M903 490L858 565M527 174L693 314M858 565L1016 605M1016 605L1235 434M281 269L363 420M1387 873L1533 940M171 5L356 1M511 487L693 314M1009 274L1181 302M114 751L166 942M-59 482L136 416M527 174L461 304M15 40L-24 337M1016 605L1173 752M1584 307L1584 594M1134 -38L1246 166M356 1L718 -12M813 793L999 775M380 715L489 865M895 166L1028 138M965 488L1016 605M1246 166L1181 302M1318 43L1492 135M1181 302L1235 434M1016 605L999 775M36 597L184 554M1235 434L1302 613M356 1L511 35M701 415L806 335M461 304L511 487M185 349L281 269M380 715L312 938M136 416L363 420M489 865L668 710M736 872L963 887M511 487L493 610M806 335L1009 274M1173 752L1302 613M1318 43L1301 175M999 775L1173 752M493 610L668 710M1066 14L1134 -38M-59 482L-24 728M1235 434L1201 618M1028 138L1246 166M511 35L737 159M903 490L965 488M1301 175L1397 264M701 415L858 565M166 942L1222 941M1134 -38L1494 -14M33 123L171 5M736 872L856 868M1201 618L1173 752M184 554L324 550M693 314L701 415M1494 -14L1584 307M1173 752L1387 873M493 610L457 739M281 269L461 304M457 739L489 865M511 35L527 174M114 751L380 715M737 159L871 -20M701 415L673 574M1395 751L1584 594M1134 -38L1318 43M363 420L324 550M229 179L340 125M33 123L185 349M1173 752L1222 941M965 488L1235 434M1387 873L1588 752M1492 135L1584 307M511 487L673 574M856 868L963 887M1397 264L1492 135M-24 728L-29 895M324 550L493 610M1181 302L1397 264M1302 613L1395 751M737 159L806 335M461 304L693 314M33 123L-24 337M718 -12L737 159M380 715L457 739M-24 337L136 416M312 938L1222 941M1318 43L1494 -14M340 125L527 174M1397 264L1511 427M737 159L693 314M36 597L136 416M871 -20L1028 138M1395 751L1387 873M1235 434L1350 482M-24 337L-59 482M963 887L1222 941M312 938L963 887M895 166L1009 274M693 314L806 335M718 -12L1134 -38M-29 895L114 751M-59 482L36 597M1397 264L1350 482M668 710L858 565M871 -20L895 166M1222 941L1533 940M457 739L668 710M36 597L114 751M511 35L718 -12M1350 482L1584 594M527 174L737 159M858 565L965 488M363 420L511 487M736 872L813 793M895 166L806 335M184 554L363 420M1588 752L1533 940M1494 -14L1492 135M1173 752L1395 751M166 942L312 938M673 574L668 710M1222 941L1387 873M36 597L-24 728M1246 166L1301 175M1350 482L1302 613M1028 138L1181 302M1302 613L1584 594M15 40L33 123M171 5L1134 -38M312 938L736 872M1584 307L1511 427M136 416L184 554M1016 605L1201 618M858 565L999 775M184 554L380 715M718 -12L871 -20M965 488L1181 302M806 335L903 490M668 710L736 872M171 5L340 125M511 487L701 415M1028 138L1009 274M856 868L999 775M324 550L511 487M871 -20L1134 -38M1395 751L1588 752M312 938L489 865M858 565L813 793M15 40L-59 482M229 179L281 269M1584 307L1588 752M184 554L114 751M1301 175L1492 135M380 715L493 610M-24 337L185 349M1511 427L1584 594M171 5L229 179M1201 618L1302 613" fill="none" stroke="currentColor" stroke-width="1.2"/><g fill="currentColor"><circle cx="15" cy="40" r="6"/><circle cx="33" cy="123" r="4"/><circle cx="-24" cy="337" r="4"/><circle cx="-59" cy="482" r="4"/><circle cx="36" cy="597" r="6"/><circle cx="-24" cy="728" r="3"/><circle cx="-29" cy="895" r="6"/><circle cx="171" cy="5" r="6"/><circle cx="229" cy="179" r="3"/><circle cx="185" cy="349" r="3"/><circle cx="136" cy="416" r="4"/><circle cx="184" cy="554" r="6"/><circle cx="114" cy="751" r="3"/><circle cx="166" cy="942" r="3"/><circle cx="356" cy="1" r="3"/><circle cx="340" cy="125" r="3"/><circle cx="281" cy="269" r="3"/><circle cx="363" cy="420" r="4"/><circle cx="324" cy="550" r="4"/><circle cx="380" cy="715" r="6"/><circle cx="312" cy="938" r="4"/><circle cx="511" cy="35" r="3"/><circle cx="527" cy="174" r="6"/><circle cx="461" cy="304" r="6"/><circle cx="511" cy="487" r="4"/><circle cx="493" cy="610" r="4"/><circle cx="457" cy="739" r="3"/><circle cx="489" cy="865" r="4"/><circle cx="718" cy="-12" r="3"/><circle cx="737" cy="159" r="4"/><circle cx="693" cy="314" r="6"/><circle cx="701" cy="415" r="6"/><circle cx="673" cy="574" r="3"/><circle cx="668" cy="710" r="3"/><circle cx="736" cy="872" r="4"/><circle cx="871" cy="-20" r="3"/><circle cx="895" cy="166" r="4"/><circle cx="806" cy="335" r="3"/><circle cx="903" cy="490" r="3"/><circle cx="858" cy="565" r="3"/><circle cx="813" cy="793" r="3"/><circle cx="856" cy="868" r="3"/><circle cx="1066" cy="14" r="3"/><circle cx="1028" cy="138" r="6"/><circle cx="1009" cy="274" r="6"/><circle cx="965" cy="488" r="6"/><circle cx="1016" cy="605" r="4"/><circle cx="999" cy="775" r="3"/><circle cx="963" cy="887" r="4"/><circle cx="1134" cy="-38" r="4"/><circle cx="1246" cy="166" r="6"/><circle cx="1181" cy="302" r="3"/><circle cx="1235" cy="434" r="3"/><circle cx="1201" cy="618" r="4"/><circle cx="1173" cy="752" r="3"/><circle cx="1222" cy="941" r="4"/><circle cx="1318" cy="43" r="3"/><circle cx="1301" cy="175" r="3"/><circle cx="1397" cy="264" r="3"/><circle cx="1350" cy="482" r="6"/><circle cx="1302" cy="613" r="6"/><circle cx="1395" cy="751" r="3"/><circle cx="1387" cy="873" r="3"/><circle cx="1494" cy="-14" r="4"/><circle cx="1492" cy="135" r="3"/><circle cx="1584" cy="307" r="4"/><circle cx="1511" cy="427" r="3"/><circle cx="1584" cy="594" r="3"/><circle cx="1588" cy="752" r="4"/><circle cx="1533" cy="940" r="3"/></g></svg>
+<div class="app">
+<header class="topbar">
+  <span class="brand"><span class="badge"><img src="img/logo.png" alt="Logo de Ingeniería Catastral y Geodesia"></span><span class="brand-t">Sycamore Gap</span></span>
+  <span class="part" id="partName">Introducción</span>
+  <span class="clock" id="clock" title="Tiempo de exposición"></span>
+  <button class="iconbtn" id="timerBtn" aria-label="Iniciar o pausar el cronómetro (T)" title="Cronómetro (T)">
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="9" r="5.8"/><path d="M8 5.5V9l2.2 1.6M6 1.5h4"/></svg>
+  </button>
+  <button class="iconbtn" id="notesBtn" aria-pressed="false" title="Guion del expositor (N)">Guion</button>
+  <span class="count" id="count">1 / 1</span>
+  <button class="iconbtn" id="themeBtn" aria-label="Cambiar tema claro u oscuro" title="Tema">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
+  </button>
+  <button class="iconbtn" id="fsBtn" aria-label="Pantalla completa" title="Pantalla completa (F)">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg>
+  </button>
+</header>
+
+<main class="deck" id="deck">
+
+<!-- ================= PORTADA ================= -->
+<section class="slide" data-part="0" data-exp="1" data-sec="30" data-title="Portada">
+<div class="frame">
+<div class="cover">
+  <div>
+    <div class="career"><span class="badge"><img src="img/logo.png" alt=""></span><span>Ingeniería Catastral y Geodesia</span></div>
+    <h1><span>Exposición de artículo · Fotogrametría</span>El legado de Sycamore Gap</h1>
+    <p class="lede mt">Cómo la inteligencia artificial y las fotos de turistas permitieron reconstruir en 3D un árbol patrimonial que ya no existe.</p>
+    <div class="legend">
+      <span style="--c:var(--p1)"><i></i><span data-name="1"></span> · El problema</span>
+      <span style="--c:var(--p2)"><i></i><span data-name="2"></span> · La metodología</span>
+      <span style="--c:var(--p3)"><i></i><span data-name="3"></span> · Los resultados</span>
+    </div>
+    <p class="meta"><em>The Legacy of Sycamore Gap: The Potential of Photogrammetric AI for Reverse Engineering Lost Heritage with Crowdsourced Data</em><br>Morelli, Mazzacca, Trybała, Gaspari, Ioli, Ma, Remondino, Challis, Poad, Turner y Mills (2024)<br>ISPRS Archives XLVIII-2-2024, pp. 281–288 · doi.org/10.5194/isprs-archives-XLVIII-2-2024-281-2024</p>
+  </div>
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 600 520">
+      <ellipse cx="300" cy="268" rx="190" ry="190" fill="var(--paper-2)"/>
+      <image href="img/arbol_solo.png" x="150" y="112" width="300" height="290" preserveAspectRatio="xMidYMid meet" class="fillin" style="animation-delay:.2s"/>
+      <g fill="none" stroke="var(--brk)" stroke-width="1.2" stroke-dasharray="4 6" class="fillin" style="animation-delay:1.4s" opacity=".75">
+        <path d="M70 120 L300 300"/><path d="M300 36 L300 300"/><path d="M530 120 L300 300"/><path d="M560 330 L300 300"/><path d="M40 360 L300 300"/><path d="M180 486 L300 300"/><path d="M430 486 L300 300"/>
+      </g>
+      <g fill="none" stroke="var(--ink-2)" stroke-width="1.4" class="draw">
+        <ellipse cx="300" cy="268" rx="262" ry="232"/>
+      </g>
+      <g fill="var(--brk)" fill-opacity=".22" stroke="var(--brk)" stroke-width="2.4" class="fillin" style="animation-delay:1.1s">
+        <path d="M58 106 l26 6 -10 22 z"/><path d="M288 24 h24 l-12 22 z"/><path d="M516 112 l26 -6 -4 24 z"/><path d="M572 320 l0 24 -22 -10 z"/><path d="M28 350 l0 24 22 -10 z"/><path d="M168 494 l24 -2 -8 -20 z"/><path d="M420 494 l24 2 -14 -20 z"/>
+      </g>
+      <circle cx="300" cy="300" r="6" fill="var(--brk)" class="fillin" style="animation-delay:1.8s"/>
+      <g font-family="Archivo, sans-serif" font-size="12" fill="var(--ink-2)" class="fillin" style="animation-delay:2s">
+        <text x="6" y="512">7 de 337 cámaras · pirámides como en la Fig. 6</text>
+      </g>
+    </svg>
+  </div>
+</div>
+</div>
+<aside class="notes">
+  <p>Buenas. Vamos a presentar el artículo <i>The Legacy of Sycamore Gap</i>, publicado en 2024 en los Archivos Internacionales de la ISPRS. Lo escribió un equipo de la Fundación Bruno Kessler (Italia), el Politécnico de Milán, la Universidad de Newcastle y el National Trust del Reino Unido.</p>
+  <p>En una frase: cómo usar inteligencia artificial y fotos tomadas por turistas para reconstruir en 3D un árbol famoso que ya no existe.</p>
+</aside>
+</section>
+
+<!-- ================= RUTA ================= -->
+<section class="slide" data-part="0" data-exp="1" data-sec="30" data-title="La ruta de hoy">
+<div class="frame">
+  <h2>La ruta de hoy</h2>
+  <p class="lede">Tres partes de cinco minutos, una por expositor. Toca una para ir directo.</p>
+  <ol class="route">
+    <li><button data-jump="p1" style="--c:var(--p1)"><span class="rn">1</span><span class="rt">El problema<small data-name="1"></small></span><span class="rd">Qué era el árbol, por qué es difícil reconstruirlo, objetivos y datos.</span><span class="rtime">0:00 – 5:00</span></button></li>
+    <li><button data-jump="p2" style="--c:var(--p2)"><span class="rn">2</span><span class="rt">La metodología<small data-name="2"></small></span><span class="rd">Emparejamiento con IA, vistas renderizadas del láser, nubes densas y tronco.</span><span class="rtime">5:00 – 10:00</span></button></li>
+    <li><button data-jump="p3" style="--c:var(--p3)"><span class="rn">3</span><span class="rt">Los resultados<small data-name="3"></small></span><span class="rd">Imágenes orientadas, precisión, árbol virtual y conclusiones.</span><span class="rtime">10:00 – 15:00</span></button></li>
+    <li><button data-jump="p4" style="--c:var(--ink-2)"><span class="rn">?</span><span class="rt">Preguntas<small>Todos</small></span><span class="rd">Banco de preguntas y glosario para prepararse.</span><span class="rtime">al final</span></button></li>
+  </ol>
+</div>
+<aside class="notes">
+  <p>La exposición tiene tres partes de unos cinco minutos. Yo explico el problema y los datos; <span data-name="2"></span> explica la metodología; <span data-name="3"></span> presenta los resultados y las conclusiones. Al final respondemos preguntas entre los tres.</p>
+</aside>
+</section>
+
+<!-- ================= PARTE 1 ================= -->
+<section class="slide" data-part="1" data-exp="1" data-sec="0" data-title="Parte 1" id="p1">
+<div class="frame">
+<div class="divider" style="--c:var(--p1)">
+  <div class="bignum" data-n="1">1</div>
+  <div><p class="of">Parte 1 de 3 · 0:00 – 5:00</p><h2>El problema</h2><p class="lede">Un árbol patrimonial talado, miles de fotos muy distintas y un método clásico que no alcanza.</p>
+  <div class="people"><span class="chip p1" data-name="1"></span></div>
+  <p class="rub">Rúbrica: comprensión del problema</p></div>
+</div>
+</div>
+<aside class="notes"><p>(Pasar directo a la siguiente.)</p></aside>
+</section>
+
+<section class="slide" data-part="1" data-exp="1" data-sec="60" data-title="El árbol">
+<div class="frame">
+<div class="grid2 wide-r">
+  <div>
+    <span class="sec">Parte 1 · Contexto <span class="chip p1" data-name="1"></span></span>
+    <h2>Un árbol de 150 años, talado en una noche</h2>
+    <ul class="ticks" style="--c:var(--p1)">
+      <li>Sicómoro de unos <strong>150 años</strong> en un hueco entre dos colinas.</li>
+      <li>Junto al <strong>Muro de Adriano</strong>, Patrimonio Mundial UNESCO, en Northumberland (Inglaterra).</li>
+      <li>Talado por vandalismo la noche del <span class="num">27 sep 2023</span>.</li>
+    </ul>
+    <div class="stamp">Ya no se puede volver a medir</div>
+  </div>
+  <figure class="fig tall"><img src="img/fig02_talado.jpg" alt="El sicómoro derribado junto al muro"><figcaption>Fig. 2 · El árbol derribado después del acto vandálico. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>El Sycamore Gap era un sicómoro de unos 150 años que estaba en un hueco entre dos colinas, junto al Muro de Adriano, en el Parque Nacional de Northumberland, Inglaterra. El muro es Patrimonio Mundial de la UNESCO y el árbol era uno de sus paisajes más reconocidos.</p>
+  <p>La noche del 27 de septiembre de 2023 alguien lo taló a propósito; la foto muestra cómo quedó. El punto clave es este: ya no se puede ir a medirlo, porque el objeto desapareció.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="1" data-exp="1" data-sec="45" data-title="Patrimonio perdido">
+<div class="frame">
+<div class="grid2">
+  <div>
+    <span class="sec">Parte 1 · Contexto <span class="chip p1" data-name="1"></span></span>
+    <h2>¿Cómo se mide algo que ya no existe?</h2>
+    <p>Con lo que quedó registrado antes de perderse: <strong>fotos de turistas, fotógrafos y archivos</strong>. A esto se le llama <strong>crowdsourcing</strong>.</p>
+    <p>Como el árbol era famoso, había muchas fotos. Con <strong>fotogrametría</strong> se pueden convertir en un modelo 3D.</p>
+    <div class="panel band" style="--c:var(--p1)"><span class="k" style="--c:var(--p1)">¿Para qué sirve el modelo?</span>Documentar la memoria del sitio, hacer réplicas físicas y experiencias de realidad virtual o aumentada.</div>
+  </div>
+  <figure class="fig"><img src="img/fig03_tls.jpg" alt="Nube de puntos del escáner láser del árbol caído"><figcaption>Fig. 3 · Nube del escáner láser del árbol caído y su tocón, 11 oct 2023. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>Cuando un bien patrimonial se pierde, la única forma de recuperarlo digitalmente es con lo que quedó registrado antes. Ahí entra el crowdsourcing: usar fotos que tomó la gente. Como el árbol era tan famoso, hay muchísimas.</p>
+  <p>Con fotogrametría esas fotos se pueden convertir en un modelo 3D, que sirve para documentar, hacer réplicas o experiencias de realidad virtual. A la derecha ven además un escaneo láser que alcanzaron a hacer del árbol caído; lo vamos a usar más adelante.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="1" data-exp="1" data-sec="60" data-title="El problema">
+<div class="frame">
+  <span class="sec">Parte 1 · Problema de investigación <span class="chip p1" data-name="1"></span></span>
+  <h2>Fotos tan distintas que los métodos clásicos no las emparejan</h2>
+  <div class="grid2" style="align-items:start">
+    <ul class="ticks" style="--c:var(--p1)">
+      <li>Cámaras distintas: de <span class="num">480×359</span> a <span class="num">9504×6336</span> px.</li>
+      <li>Estaciones, luz, nieve, noche, blanco y negro.</li>
+      <li>El árbol cambia: hojas, viento.</li>
+    </ul>
+    <div class="panel band" style="--c:var(--brk)"><span class="k" style="--c:var(--brk)">Punto de enlace (tie point)</span>El mismo detalle reconocido en dos fotos. Sin ellos no hay fotogrametría, y el método clásico <strong>SIFT</strong> falla con cambios tan fuertes.</div>
+  </div>
+  <figure class="fig mt"><img src="img/fig01_crowdsourced.jpg" alt="Mosaico de fotos del árbol en distintas épocas" style="max-height:min(33vh,360px)"><figcaption>Fig. 1 · Fotos multitemporales y multiestacionales recolectadas. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+<aside class="notes">
+  <p>El problema es que estas fotos son muy distintas entre sí. Miren la figura: invierno con nieve, verano, atardecer, noche, blanco y negro. Cada una con una cámara diferente, con resoluciones desde 480 por 359 píxeles hasta 9504 por 6336. Además el árbol cambia: a veces tiene hojas, a veces no, y el viento lo mueve.</p>
+  <p>La fotogrametría necesita puntos de enlace: el mismo detalle encontrado en dos fotos. Los métodos clásicos como SIFT fallan cuando los cambios de luz y ángulo son tan fuertes, y como cada foto viene de una cámara distinta, la autocalibración también es poco confiable.</p>
+  <p>La pregunta del artículo es entonces: ¿cómo orientar y reconstruir en 3D un conjunto de imágenes tan desordenado?</p>
+</aside>
+</section>
+
+<section class="slide" data-part="1" data-exp="1" data-sec="75" data-title="Objetivos y datos">
+<div class="frame">
+  <span class="sec">Parte 1 · Objetivos y datos <span class="chip p1" data-name="1"></span></span>
+  <h2>Dos objetivos, tres fuentes de datos</h2>
+  <div class="grid2" style="align-items:start">
+    <div class="panel band" style="--c:var(--p1)"><span class="k" style="--c:var(--p1)">Objetivos</span>
+      <ol class="checks"><li>Orientar todas las imágenes con <strong>métodos de IA fotogramétrica</strong>.</li><li>Reconstruir el árbol en 3D con <strong>exactitud geométrica y de color</strong>.</li></ol>
+    </div>
+    <p class="small" style="margin:0">Los resultados se piensan para documentación histórica, visualización web y realidad virtual o aumentada.</p>
+  </div>
+  <div class="triad mt" style="--c:var(--p1)">
+    <div><b>~180</b><em>fotos de internet y del National Trust</em></div>
+    <div><b>4</b><em>videos de dron del National Trust (volar sin permiso está prohibido)</em></div>
+    <div><b>90<small>min</small></b><em>de escaneo láser (Leica RTC360) el 11 oct 2023, 14 días después de la tala. Da la <strong>escala</strong> y la referencia.</em></div>
+  </div>
+</div>
+<aside class="notes">
+  <p>Los autores se plantean dos objetivos: primero, orientar todas las imágenes disponibles con métodos de IA fotogramétrica; segundo, obtener un modelo 3D del árbol con buena exactitud geométrica y de color.</p>
+  <p>Los datos son tres. Unas 180 fotos de internet y del National Trust. Cuatro videos de dron que aportó el National Trust, porque allí está prohibido volar sin permiso. Y un escaneo láser terrestre que hizo la Universidad de Newcastle el 11 de octubre de 2023, catorce días después de la tala, con un Leica RTC360 y en solo 90 minutos antes de que retiraran el árbol. Ese escaneo es la referencia de escala y de precisión.</p>
+  <p>Ahora <span data-name="2"></span> explica cómo usaron estos datos.</p>
+</aside>
+</section>
+
+<!-- ================= PARTE 2 ================= -->
+<section class="slide" data-part="2" data-exp="2" data-sec="0" data-title="Parte 2" id="p2">
+<div class="frame">
+<div class="divider" style="--c:var(--p2)">
+  <div class="bignum" data-n="2">2</div>
+  <div><p class="of">Parte 2 de 3 · 5:00 – 10:00</p><h2>La metodología</h2><p class="lede">Redes neuronales para emparejar fotos y un escáner láser convertido en fotografías.</p>
+  <div class="people"><span class="chip p2" data-name="2"></span></div>
+  <p class="rub">Rúbrica: comprensión del desarrollo de la investigación</p></div>
+</div>
+</div>
+<aside class="notes"><p>(Pasar directo a la siguiente.)</p></aside>
+</section>
+
+<section class="slide" data-part="2" data-exp="2" data-sec="60" data-title="Flujo del método">
+<div class="frame">
+  <span class="sec">Parte 2 · Metodología <span class="chip p2" data-name="2"></span></span>
+  <h2>El flujo de trabajo en seis pasos</h2>
+  <ol class="steps">
+    <li><b>Emparejar con IA</b>Puntos de enlace entre fotos y frames de video.<span class="tool">SuperPoint + LightGlue · DIM</span></li>
+    <li><b>Orientar cámaras</b>Ajuste de haces: posición y orientación de cada foto.<span class="tool">COLMAP</span></li>
+    <li><b>Vistas sintéticas del láser</b>Fotos virtuales del TLS con posición conocida, para dar escala.<span class="tool">PlotOptix · NVIDIA OptiX</span></li>
+    <li><b>Nubes densas</b>Una por video, con las vistas sintéticas fijas en el ajuste.<span class="tool">Agisoft Metashape</span></li>
+    <li><b>Tronco y ramas</b>Separar hojas y madera del TLS y alinearlo con el video.<span class="tool">LeWoS · ICP</span></li>
+    <li><b>Publicar en la web</b>Nubes y fotos juntas, en tres épocas.<span class="tool">Potree</span></li>
+  </ol>
+</div>
+<aside class="notes">
+  <p>Este es el método completo en seis pasos. Uno: encontrar puntos de enlace entre las fotos con inteligencia artificial. Dos: con esos puntos, calcular dónde estaba cada cámara. Tres: generar vistas sintéticas desde el escáner láser, que tienen posición conocida y dan la escala. Cuatro: producir nubes de puntos densas. Cinco: completar el tronco y las ramas con el escáner. Seis: publicar todo en una plataforma web. Voy a detallar los pasos más importantes.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="2" data-exp="2" data-sec="75" data-title="Emparejamiento con IA">
+<div class="frame">
+<div class="grid2">
+  <div>
+    <span class="sec">Parte 2 · Pasos 1 y 2 <span class="chip p2" data-name="2"></span></span>
+    <h2>Redes neuronales para encontrar los puntos de enlace</h2>
+    <ul class="ticks" style="--c:var(--p2)">
+      <li><strong>SuperPoint</strong> detecta y describe puntos; <strong>LightGlue</strong> decide cuál corresponde con cuál. Entrenadas para escenarios extremos.</li>
+      <li>No están hechas para imágenes grandes. Solución: librería <strong>deep-image-matching (DIM)</strong>.</li>
+    </ul>
+    <div class="panel band mt" style="--c:var(--p2)"><span class="k" style="--c:var(--p2)">Cómo trabaja DIM</span>
+      <ol class="checks"><li>Compara las fotos reducidas a <span class="num">1000 px</span> para hallar pares candidatos.</li><li>Extrae puntos en resolución completa <strong>por teselas</strong>.</li><li>Entrega los emparejamientos a <strong>COLMAP</strong>, que orienta las cámaras.</li></ol>
+    </div>
+  </div>
+  <figure class="fig"><img src="img/fig06_bloque.jpg" alt="Bloque de imágenes orientado, con cámaras en rojo"><figcaption>Fig. 6 · Bloque orientado: cada pirámide roja es una cámara; su altura indica la focal. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>El corazón del método es SuperPoint más LightGlue. SuperPoint es una red neuronal que detecta puntos característicos y los describe; LightGlue es otra red que decide qué punto de una foto corresponde a cuál en la otra. Como están entrenadas con casos extremos, toleran los cambios de luz y de ángulo que confunden a SIFT.</p>
+  <p>El problema es que estas redes no se diseñaron para imágenes de alta resolución. Por eso usaron la librería deep-image-matching, DIM, creada por el mismo grupo: primero compara todas las fotos reducidas a 1000 píxeles para saber qué pares se parecen, y después extrae los puntos en la imagen completa por teselas, es decir, por pedazos. Los emparejamientos pasan a COLMAP, que calcula la posición de cada cámara. En la figura, cada pirámide roja es una foto ubicada en el espacio.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="2" data-exp="2" data-sec="40" data-title="Ajuste y punto de control">
+<div class="frame">
+  <span class="sec">Parte 2 · Control de calidad <span class="chip p2" data-name="2"></span></span>
+  <h2>Que el ajuste converja no significa que sea correcto</h2>
+  <p><strong>Ajuste de haces:</strong> corrige a la vez cámaras y puntos 3D para que los rayos se crucen lo mejor posible, como un ajuste por mínimos cuadrados de una red. Para verificarlo eligieron un <strong>punto natural en el tronco</strong> y midieron su <strong>error de reproyección</strong> en píxeles.</p>
+  <figure class="fig mt"><img src="img/fig07_checkpoint.jpg" alt="Punto de control marcado en el tronco en cuatro fotos"><figcaption>Fig. 7 · Localización manual del punto de control (verde) en varias imágenes. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+<aside class="notes">
+  <p>COLMAP hace un ajuste de haces: ajusta al mismo tiempo las posiciones de las cámaras y los puntos 3D para que los rayos se crucen lo mejor posible, parecido al ajuste por mínimos cuadrados de una red que vemos en la carrera.</p>
+  <p>Pero que el ajuste converja no garantiza que esté bien. Por eso eligieron un punto natural en el tronco, visible en muchas fotos, y midieron el error de reproyección: cuántos píxeles se separa el punto calculado del punto marcado a mano en cada foto.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="2" data-exp="2" data-sec="80" data-title="Vistas del láser">
+<div class="frame">
+<div class="grid2">
+  <div>
+    <span class="sec">Parte 2 · Paso 3 · Aporte clave <span class="chip p2" data-name="2"></span></span>
+    <h2>Convertir el escáner láser en fotografías</h2>
+    <p><strong>Lo tradicional:</strong> alinear a ojo las dos nubes y afinar con ICP. Es lento, rígido y solo usa geometría, no color.</p>
+    <p><strong>Lo propuesto</strong> (según Elias et al., 2023): renderizar la nube TLS con una cámara virtual de parámetros conocidos.</p>
+    <ul class="ticks" style="--c:var(--p2)">
+      <li><span class="num">21</span> vistas: <span class="num">1</span> cenital + <span class="num">20</span> oblicuas en círculo, de <span class="num">1920×1080</span> px y GSD ≈ <span class="num">2 cm</span>.</li>
+      <li>Se <strong>borró el árbol caído</strong> de la nube para no confundirlo con el árbol en pie.</li>
+      <li>Su posición se conoce, así que entran al ajuste como <strong>restricciones</strong>: dan escala y georreferencia.</li>
+    </ul>
+  </div>
+  <figure class="fig"><img src="img/fig04_render_tls.jpg" alt="Imágenes renderizadas del TLS y red de cámaras virtuales"><figcaption>Fig. 4 · Vistas renderizadas del TLS (izq.) y red de cámaras virtuales (der.). <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>El segundo aporte es cómo unir las fotos con el escáner láser. Lo tradicional es alinear aproximadamente las dos nubes y luego afinar con ICP. Eso es lento, usa una transformación rígida y solo considera la geometría, no el color.</p>
+  <p>Siguiendo a Elias y otros (2023), hicieron algo distinto: con la librería PlotOptix, que usa el motor de trazado de rayos NVIDIA OptiX, pusieron una cámara virtual y “tomaron fotos” de la nube del escáner. Generaron 21 vistas: una cenital y veinte oblicuas en círculo, de 1920 por 1080 píxeles, con GSD cercano a 2 cm. Un detalle importante: borraron el árbol caído de la nube, para que la IA no intentara emparejarlo con el árbol en pie de las fotos.</p>
+  <p>Como ellos mismos pusieron la cámara virtual, conocen exactamente su posición. Esas vistas entran al ajuste como restricciones, y así el modelo queda con escala y georreferenciado.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="2" data-exp="2" data-sec="45" data-title="Videos y tronco">
+<div class="frame">
+<div class="grid2">
+  <div>
+    <span class="sec">Parte 2 · Pasos 4 y 5 <span class="chip p2" data-name="2"></span></span>
+    <h2>Nubes densas por video y un tronco prestado del escáner</h2>
+    <ul class="ticks" style="--c:var(--p2)">
+      <li>Frames de cada video + vistas sintéticas, emparejados con DIM.</li>
+      <li>COLMAP no acepta posiciones previas: el bloque pasó a <strong>Metashape</strong> y allí se fijaron las vistas sintéticas.</li>
+      <li><strong>Validación:</strong> un tramo de muro que no cambió, contra una malla TLS de <span class="num">5 mm</span> en CloudCompare.</li>
+      <li><strong>Tronco:</strong> LeWoS separa hojas y madera; ICP sin escala lo alinea con el video 4.</li>
+    </ul>
+  </div>
+  <figure class="fig"><img src="img/fig11_coregistro.jpg" alt="Nube TLS segmentada y co-registro con el video"><figcaption>Fig. 11 · (a–b) TLS segmentado: hojas en azul, madera en rojo. (c–d) TLS y video alineados. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>Con los videos se hizo lo mismo: frames de cada video más las vistas sintéticas, emparejados con DIM. Como COLMAP no permite meter posiciones de cámara conocidas en el ajuste, pasaron el bloque a Agisoft Metashape y allí fijaron las posiciones de las vistas sintéticas. Así obtuvieron una nube densa por video.</p>
+  <p>Para validar, usaron un tramo de muro de piedra que no cambió y compararon cada nube con una malla del escáner de 5 mm en CloudCompare. Y para el tronco, separaron hojas y madera del escáner con LeWoS y alinearon el árbol caído con la nube del video 4 mediante ICP.</p>
+  <p>Ahora <span data-name="3"></span> muestra qué tan bien funcionó todo esto.</p>
+</aside>
+</section>
+
+<!-- ================= PARTE 3 ================= -->
+<section class="slide" data-part="3" data-exp="3" data-sec="0" data-title="Parte 3" id="p3">
+<div class="frame">
+<div class="divider" style="--c:var(--p3)">
+  <div class="bignum" data-n="3">3</div>
+  <div><p class="of">Parte 3 de 3 · 10:00 – 15:00</p><h2>Los resultados</h2><p class="lede">Más imágenes orientadas, errores de centímetros y un árbol virtual que cualquiera puede visitar.</p>
+  <div class="people"><span class="chip p3" data-name="3"></span></div>
+  <p class="rub">Rúbrica: comprensión de los principales resultados</p></div>
+</div>
+</div>
+<aside class="notes"><p>(Pasar directo a la siguiente.)</p></aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="60" data-title="Imágenes orientadas">
+<div class="frame">
+  <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+  <h2>La IA orientó 299 de 337 imágenes</h2>
+  <div class="bars" role="img" aria-label="Imágenes orientadas de 337: RootSIFT 164, Metashape 215, SuperPoint más LightGlue 299">
+    <div class="bar"><span class="lab">RootSIFT + COLMAP<small>método clásico</small></span><div class="track"><div class="fill" style="--w:48.66%">164</div></div></div>
+    <div class="bar"><span class="lab">Agisoft Metashape<small>software comercial</small></span><div class="track"><div class="fill" style="--w:63.80%">215</div></div></div>
+    <div class="bar"><span class="lab">SuperPoint + LightGlue<small>IA · DIM + COLMAP</small></span><div class="track"><div class="fill win" style="--w:88.72%">299</div></div></div>
+    <div class="axis"><span>0</span><span>337 imágenes (fotos + frames de video)</span></div>
+  </div>
+  <figure class="fig mt"><img src="img/fig05_comparacion.jpg" alt="Vistas en planta de los tres bloques orientados" style="max-height:min(26vh,260px)"><figcaption>Fig. 5 · Vistas en planta de los bloques orientados con cada método. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+<aside class="notes">
+  <p>Primer resultado: cuántas imágenes se lograron orientar de un total de 337, que incluye las fotos y algunos frames de video que agregaron para reforzar la red de cámaras.</p>
+  <p>Con el método clásico, RootSIFT en COLMAP, se orientaron 164, menos de la mitad. Con Agisoft Metashape, 215. Con SuperPoint y LightGlue, 299: casi nueve de cada diez. Frente a Metashape son 84 imágenes más, cerca de un 40 % más, que es la cifra que dan los autores en las conclusiones.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="30" data-title="Precisión">
+<div class="frame">
+<div class="grid2">
+  <div>
+    <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+    <h2>Más imágenes y además más precisas</h2>
+    <div class="triad" style="--cols:2">
+      <div><b>2,04<small>px</small></b><em>Error medio de reproyección con SuperPoint + LightGlue, en 107 imágenes</em></div>
+      <div class="muted"><b>2,66<small>px</small></b><em>Error medio con Metashape, en solo 62 proyecciones</em></div>
+    </div>
+    <p class="small mt">Se excluyeron las proyecciones con error mayor a 5 px.</p>
+  </div>
+  <figure class="fig"><img src="img/fig07_checkpoint.jpg" alt="Punto de control en el tronco"><figcaption>Punto de control natural en el tronco (Fig. 7). <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>¿Y qué tan exactas quedaron? En el punto de control del tronco, SuperPoint y LightGlue logró un error medio de reproyección de 2,04 píxeles, medido en 107 imágenes. Metashape tuvo 2,66 píxeles con solo 62 proyecciones. En ambos casos se descartaron las proyecciones con más de 5 píxeles de error. Es decir, la IA no solo orientó más imágenes, también las orientó mejor.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="40" data-title="Videos">
+<div class="frame">
+  <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+  <h2>Videos: 4 de 4 con IA, 2 de 4 con Metashape</h2>
+  <p style="margin-bottom:.5em">DIM logró unir las vistas sintéticas del láser con los frames reales en los <strong>cuatro</strong> videos, pese a la enorme diferencia de aspecto entre ambos.</p>
+  <figure class="fig"><img style="max-height:min(46vh,480px)" src="img/fig08_videos.jpg" alt="Orientación de los cuatro videos con Metashape y con SuperPoint + LightGlue"><figcaption>Fig. 8 · Arriba Metashape, abajo SuperPoint + LightGlue. El círculo central son las vistas renderizadas del TLS alrededor del tocón. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+<aside class="notes">
+  <p>En los videos pasó algo parecido. DIM consiguió unir las vistas sintéticas del escáner con los frames reales en los cuatro videos; Metashape solo en dos. En la figura se ve arriba Metashape y abajo la IA; el círculo de puntos es la trayectoria del dron y el círculo central son las cámaras virtuales alrededor del tocón.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="50" data-title="Calidad en el muro">
+<div class="frame">
+<div class="grid2 wide-r">
+  <div>
+    <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+    <h2>Error de 2,4 a 4 cm frente al escáner</h2>
+    <div class="scrollx"><table class="tbl">
+      <thead><tr><th>Video</th><th>Media [m]</th><th>Desv. [m]</th></tr></thead>
+      <tbody><tr><td>Video 1</td><td>0,024</td><td>0,018</td></tr><tr><td>Video 2</td><td>0,040</td><td>0,027</td></tr><tr><td>Video 3</td><td>0,030</td><td>0,030</td></tr><tr><td>Video 4</td><td>0,027</td><td>0,018</td></tr></tbody>
+    </table></div>
+    <p class="small" style="margin-top:.4rem">Tabla 1 · Distancia nube–malla TLS sobre el muro de piedra.</p>
+    <div class="stamp ok">Satisfactorio para videos con GSD de 2 a 5 cm</div>
+  </div>
+  <figure class="fig"><img src="img/fig09_muro.jpg" alt="Mapas de color de diferencias en el muro"><figcaption>Fig. 9 · Azul = poco error, rojo = mucho (0 a 0,10 m). El error se concentra arriba del muro por oclusiones. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+</div>
+</div>
+<aside class="notes">
+  <p>Para medir la calidad compararon las nubes de cada video contra el muro de piedra del escáner. El error medio estuvo entre 2,4 y 4 centímetros y la desviación estándar entre 1,8 y 3 centímetros. Teniendo en cuenta que el tamaño de píxel en el terreno de los videos es de 2 a 5 centímetros, los autores lo consideran satisfactorio.</p>
+  <p>En los mapas de colores, azul es poco error y rojo es mucho. La cara vertical del muro sale bien; el error se concentra en la parte de arriba, que es irregular y queda oculta en los videos.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="30" data-title="Nubes del árbol">
+<div class="frame">
+<div class="grid2 wide-l">
+  <figure class="fig tall"><img src="img/fig10_nubes.jpg" alt="Nubes densas del árbol por cada video, de frente y en planta"><figcaption>Fig. 10 · Nubes densas por video, de frente (arriba) y en planta (abajo). <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+  <div>
+    <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+    <h2>Copa en verano, tronco en invierno</h2>
+    <ul class="ticks" style="--c:var(--p3)">
+      <li>Videos <strong>1, 2 y 3</strong> (primavera y verano): la copa casi completa.</li>
+      <li>Video <strong>4</strong> (invierno): tronco y ramas, con ruido por la compresión y lo delgado de las ramas.</li>
+    </ul>
+  </div>
+</div>
+</div>
+<aside class="notes">
+  <p>Estas son las nubes densas del árbol, de frente y desde arriba. Los videos 1, 2 y 3 son de primavera y verano y reconstruyen casi toda la copa. El video 4 es de invierno y muestra el tronco y las ramas, pero con ruido, porque las ramas son delgadas y el video está muy comprimido.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="40" data-title="Árbol virtual">
+<div class="frame">
+<div class="grid2">
+  <figure class="fig tall"><img src="img/fig12_arbol.jpg" alt="Nube completa del árbol reconstruido y detalle del tronco"><figcaption>Fig. 12 · (a) Copa de los videos + tronco del TLS. (b) Hueco del tronco rellenado con datos de video. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+  <div>
+    <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+    <h2>El árbol virtual completo</h2>
+    <div class="triad" style="--cols:1"><div><b>5,3<small>cm</small></b><em>RMSE del ICP entre el TLS del árbol caído y la nube del video 4</em></div></div>
+    <p class="mt">Queda un hueco de <strong>~50 cm</strong> entre tocón y tronco: el National Trust cortó y tomó muestras antes del escaneo.</p>
+  </div>
+</div>
+</div>
+<aside class="notes">
+  <p>Como el tronco del video 4 era ruidoso, usaron el escáner del árbol caído. Separaron hojas y madera, “levantaron” virtualmente el árbol y lo alinearon con el árbol en pie del video 4 usando ICP, con un error RMSE de 5,3 centímetros.</p>
+  <p>El resultado es el árbol virtual completo: la copa sale de los videos y el tronco y las ramas del escáner. Queda un hueco de unos 50 centímetros entre el tocón y el tronco, porque el National Trust cortó y tomó muestras antes de que se hiciera el escaneo.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="20" data-title="Plataforma web">
+<div class="frame">
+  <span class="sec">Parte 3 · Resultados <span class="chip p3" data-name="3"></span></span>
+  <h2>Una plataforma web con tres épocas</h2>
+  <figure class="fig"><img src="img/fig13_web.jpg" alt="Vistas de la plataforma web Potree" style="max-height:min(34vh,340px)"><figcaption>Fig. 13 · Interfaz web en Potree: 3dom.fbk.eu/projects/sycamore_gap. <i>Morelli et al. 2024, CC BY 4.0</i></figcaption></figure>
+  <div class="tl">
+    <div style="--c:var(--p1)"><b>Antes de la tala</b>Reconstruido con fotos de la gente</div>
+    <div style="--c:var(--brk)"><b>11 oct 2023</b>Árbol caído, escáner láser</div>
+    <div style="--c:var(--p3)"><b>16 abr 2024</b>Solo el tocón, vuelo de dron</div>
+  </div>
+</div>
+<aside class="notes">
+  <p>Todo se publicó en una plataforma web hecha con Potree, que permite ver nubes de puntos enormes en el navegador, medir y hacer cortes. Muestra tres épocas: el árbol antes de la tala, el árbol caído el 11 de octubre de 2023 y el tocón actual, de un vuelo de dron del 16 de abril de 2024. Las fotos originales aparecen ubicadas donde fueron tomadas.</p>
+</aside>
+</section>
+
+<section class="slide" data-part="3" data-exp="3" data-sec="30" data-title="Conclusiones">
+<div class="frame">
+  <span class="sec">Parte 3 · Conclusiones <span class="chip p3" data-name="3"></span></span>
+  <h2>Lo que demuestra el artículo</h2>
+  <div class="grid2" style="align-items:start">
+    <ol class="checks">
+      <li>La IA orientó <strong>≈40 % más imágenes</strong> que las técnicas tradicionales, con mejor precisión.</li>
+      <li>Las vistas renderizadas del láser dieron <strong>escala y referencia directa</strong> y redujeron el tiempo de emparejamiento.</li>
+      <li>La memoria del árbol quedó <strong>disponible para todos</strong> en la web.</li>
+    </ol>
+    <div class="stack">
+      <div class="panel band" style="--c:var(--p3)"><span class="k" style="--c:var(--p3)">Trabajo futuro</span>Probar <strong>NeRF</strong> y <strong>Gaussian Splatting</strong> con los mismos datos.</div>
+      <div class="panel band" style="--c:var(--p1)"><span class="k" style="--c:var(--p1)">Para nuestra carrera</span>Fotos de archivo o ciudadanas pueden volverse <strong>información métrica</strong>: útil para patrimonio y para actualizar el catastro.</div>
+    </div>
+  </div>
+</div>
+<aside class="notes">
+  <p>En conclusión: la inteligencia artificial permitió orientar cerca de un 40 % más de imágenes y con mejor precisión; las vistas renderizadas del escáner dieron escala y referencia de forma directa y redujeron el tiempo de emparejamiento; y la memoria del árbol quedó disponible para cualquier persona. Como trabajo futuro los autores proponen probar NeRF y Gaussian Splatting.</p>
+  <p>Para nuestra carrera, la idea importante es que fotos de archivo o tomadas por ciudadanos pueden convertirse en información métrica, útil para patrimonio y también para actualizar información del territorio.</p>
+</aside>
+</section>
+
+<!-- ================= CIERRE ================= -->
+<section class="slide" data-part="4" data-exp="0" data-sec="0" data-title="Preguntas" id="p4">
+<div class="frame">
+  <div class="career"><span class="badge"><img src="img/logo.png" alt=""></span><span>Ingeniería Catastral y Geodesia</span></div>
+  <h1 class="bigq">¿Preguntas?</h1>
+  <div class="triad mt" style="--cols:4">
+    <div style="--c:var(--p3)"><b>299/337</b><em>imágenes orientadas</em></div>
+    <div style="--c:var(--p3)"><b>2,04<small>px</small></b><em>error en el punto de control</em></div>
+    <div style="--c:var(--p3)"><b>2,4–4<small>cm</small></b><em>error frente al TLS</em></div>
+    <div style="--c:var(--p3)"><b>5,3<small>cm</small></b><em>RMSE del tronco</em></div>
+  </div>
+  <div class="people mt"><span class="chip p1" data-name="1"></span><span class="chip p2" data-name="2"></span><span class="chip p3" data-name="3"></span></div>
+</div>
+<aside class="notes"><p>Muchas gracias. Quedamos atentos a sus preguntas. Cada uno responde las de su parte; repasen las dos diapositivas siguientes antes de exponer.</p></aside>
+</section>
+
+<section class="slide" data-part="4" data-exp="0" data-sec="0" data-title="Banco de preguntas">
+<div class="frame">
+  <span class="sec">Preparación · no se expone</span>
+  <h2>Banco de preguntas probables</h2>
+  <p class="lede">Toca una tarjeta para ver la respuesta. La etiqueta indica quién la contesta, pero los tres deben saberlas.</p>
+  <div class="flips">
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E2">¿Por qué no bastó con SIFT?</span><span class="a">Sus descriptores son “hechos a mano”: toleran poco los cambios fuertes de luz y ángulo de fotos tomadas en épocas y con cámaras distintas.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E1">¿Para qué sirvió el escáner láser?</span><span class="a">Dio la escala y la referencia, sirvió para validar la calidad y aportó el tronco y las ramas del árbol final.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E2">¿Por qué borraron el árbol de la nube TLS antes de renderizar?</span><span class="a">Estaba caído; la IA podría emparejarlo mal con el árbol en pie de las fotos.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E2">¿Por qué pasaron de COLMAP a Metashape?</span><span class="a">COLMAP no admite posiciones de cámara conocidas como observaciones en el ajuste; Metashape sí.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E3">¿Qué significa un error de reproyección de 2,04 px?</span><span class="a">En promedio, el punto calculado cae a unos 2 píxeles del punto marcado a mano en la foto.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E3">¿Por qué hay más error arriba del muro?</span><span class="a">Es irregular y queda tapado (ocluido) desde los ángulos del dron.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E3">¿Qué es el hueco de 50 cm?</span><span class="a">El tramo que el National Trust cortó y muestreó antes del escaneo del 11 de octubre de 2023.</span><span class="hint">Toca para voltear</span></button>
+    <button class="flip" aria-expanded="false"><span class="q" data-who="E3">¿Qué son NeRF y Gaussian Splatting?</span><span class="a">Métodos neuronales que representan la escena para generar vistas nuevas; los autores quieren probarlos como trabajo futuro.</span><span class="hint">Toca para voltear</span></button>
+  </div>
+</div>
+<aside class="notes"><p>Anexo para estudiar. La rúbrica evalúa que todos puedan contestar y participen por igual.</p></aside>
+</section>
+
+<section class="slide" data-part="4" data-exp="0" data-sec="0" data-title="Glosario">
+<div class="frame">
+  <span class="sec">Preparación · no se expone</span>
+  <h2>Glosario rápido</h2>
+  <div class="gloss">
+    <div><b>Fotogrametría</b>Obtener medidas y modelos 3D a partir de fotografías.</div>
+    <div><b>SfM</b>Structure from Motion: calcula cámaras y puntos 3D a partir de muchas fotos.</div>
+    <div><b>Punto de enlace</b>El mismo detalle reconocido en dos o más fotos.</div>
+    <div><b>Ajuste de haces</b>Ajuste simultáneo de cámaras y puntos para que los rayos se crucen.</div>
+    <div><b>TLS</b>Escáner láser terrestre: nube de puntos medida directamente.</div>
+    <div><b>GSD</b>Tamaño del píxel sobre el terreno (≈2 cm en las vistas sintéticas).</div>
+    <div><b>ICP</b>Iterative Closest Point: alinea dos nubes minimizando distancias.</div>
+    <div><b>Nube densa</b>Millones de puntos 3D con color generados a partir de las fotos orientadas.</div>
+    <div><b>Crowdsourcing</b>Datos aportados por muchas personas, como fotos de turistas.</div>
+  </div>
+</div>
+<aside class="notes"><p>Glosario para repasar antes de la exposición.</p></aside>
+</section>
+
+</main>
+
+<aside class="guion" id="guion" hidden aria-live="polite">
+  <div class="gh"><b id="gWho"></b><span id="gTitle"></span><span id="gPlan"></span></div>
+  <div class="gt" id="gText"></div>
+</aside>
+
+<footer class="bottombar">
+  <button class="navbtn ghost" id="prev" aria-label="Diapositiva anterior">Anterior</button>
+  <div class="progress" id="progress" aria-label="Progreso por partes"></div>
+  <button class="navbtn" id="next" aria-label="Diapositiva siguiente">Siguiente</button>
+</footer>
+</div>
+
+<script>
+/* ====== Cambien aquí los nombres del grupo ====== */
+var EQUIPO = { 1: "Expositor 1", 2: "Expositor 2", 3: "Expositor 3" };
+/* ================================================= */
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var cur = 0;
+  var partNames = ['Introducción','Parte 1: El problema','Parte 2: La metodología','Parte 3: Los resultados','Cierre y preparación'];
+  var partColors = ['var(--ink-2)','var(--p1)','var(--p2)','var(--p3)','var(--ink)'];
+  document.querySelectorAll('[data-name]').forEach(function(el){ el.textContent = EQUIPO[el.dataset.name]; });
+
+  // plan de tiempo
+  var planStart = [], planEnd = [], acc = 0;
+  slides.forEach(function(s,i){ var sec = +s.dataset.sec || 0; planStart[i] = acc; acc += sec; planEnd[i] = acc; });
+  var TOTAL = acc;
+  function fmt(s){ s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ':' + ('0' + s%60).slice(-2); }
+
+  // barra de progreso por partes
+  var prog = document.getElementById('progress'), groups = {};
+  slides.forEach(function(s,i){ var p = s.dataset.part; (groups[p] = groups[p] || []).push(i); });
+  Object.keys(groups).forEach(function(p){
+    var b = document.createElement('button'); b.className = 'seg';
+    b.style.setProperty('--n', groups[p].length); b.style.setProperty('--c', partColors[p]);
+    b.setAttribute('aria-label', 'Ir a ' + partNames[p]); b.title = partNames[p]; b.innerHTML = '<i></i>';
+    b.addEventListener('click', function(){ go(groups[p][0]); });
+    prog.appendChild(b); groups[p].seg = b;
+  });
+
+  var gWho = document.getElementById('gWho'), gTitle = document.getElementById('gTitle'), gPlan = document.getElementById('gPlan'), gText = document.getElementById('gText');
+  function go(i){
+    i = Math.max(0, Math.min(slides.length-1, i));
+    slides[cur].classList.remove('active'); cur = i; slides[cur].classList.add('active'); slides[cur].scrollTop = 0;
+    var s = slides[cur], p = s.dataset.part, e = s.dataset.exp;
+    document.getElementById('partName').textContent = partNames[p];
+    document.getElementById('count').textContent = (cur+1) + ' / ' + slides.length;
+    Object.keys(groups).forEach(function(k){
+      var g = groups[k], done = g.filter(function(x){ return x <= cur; }).length;
+      g.seg.style.setProperty('--fill', (done/g.length*100) + '%');
+    });
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === slides.length-1;
+    var n = s.querySelector('.notes');
+    gText.innerHTML = n ? n.innerHTML : '';
+    gWho.textContent = e === '0' ? 'Todos' : EQUIPO[e];
+    gTitle.textContent = '· ' + (s.dataset.title || '');
+    gPlan.textContent = +s.dataset.sec ? '· plan ' + fmt(planStart[cur]) + ' → ' + fmt(planEnd[cur]) + ' (' + s.dataset.sec + ' s)' : '';
+    try { history.replaceState(null, '', '#' + (cur+1)); } catch(err) {}
+    tick();
+  }
+
+  // cronómetro
+  var running = false, elapsed = 0, last = performance.now();
+  var clock = document.getElementById('clock');
+  function tick(){
+    var now = performance.now(); if (running) elapsed += (now - last)/1000; last = now;
+    var html = '<span class="clock-t">' + fmt(elapsed) + ' / ' + fmt(TOTAL) + '</span>';
+    if (running || elapsed > 0) {
+      var st = '', cls = 'ok';
+      if (+slides[cur].dataset.sec) {
+        if (elapsed < planStart[cur] - 5) { st = 'adelantados ' + fmt(planStart[cur] - elapsed); cls = 'early'; }
+        else if (elapsed > planEnd[cur] + 5) { st = 'atrasados ' + fmt(elapsed - planEnd[cur]); cls = 'late'; }
+        else st = 'a tiempo';
+      } else st = running ? 'corriendo' : 'en pausa';
+      html += ' <span class="st ' + cls + '">' + st + '</span>';
+    }
+    clock.innerHTML = html;
+  }
+  setInterval(tick, 250);
+  var timerBtn = document.getElementById('timerBtn');
+  function toggleTimer(){ running = !running; last = performance.now(); timerBtn.setAttribute('aria-pressed', running); tick(); }
+  function resetTimer(){ running = false; elapsed = 0; timerBtn.setAttribute('aria-pressed', false); tick(); }
+  timerBtn.onclick = toggleTimer;
+
+  // guion
+  var guion = document.getElementById('guion'), notesBtn = document.getElementById('notesBtn');
+  function toggleNotes(){ guion.hidden = !guion.hidden; notesBtn.setAttribute('aria-pressed', !guion.hidden); }
+  notesBtn.onclick = toggleNotes;
+
+  document.getElementById('prev').onclick = function(){ go(cur-1); };
+  document.getElementById('next').onclick = function(){ go(cur+1); };
+  document.addEventListener('keydown', function(e){
+    var t = e.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA') return;
+    if (['ArrowRight','PageDown'].indexOf(e.key) > -1 || (e.key === ' ' && t !== 'BUTTON')) { e.preventDefault(); go(cur+1); }
+    else if (['ArrowLeft','PageUp'].indexOf(e.key) > -1) { e.preventDefault(); go(cur-1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length-1);
+    else if (e.key === 'n' || e.key === 'N') toggleNotes();
+    else if (e.key === 't' || e.key === 'T') toggleTimer();
+    else if (e.key === 'r' || e.key === 'R') resetTimer();
+    else if (e.key === 'f' || e.key === 'F') fullscreen();
+  });
+  var sx = null, sy = null, deck = document.getElementById('deck');
+  deck.addEventListener('touchstart', function(e){ if (e.target.closest('.scrollx')) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+  deck.addEventListener('touchend', function(e){ if (sx === null) return; var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5) go(cur + (dx < 0 ? 1 : -1)); sx = null; });
+  document.querySelectorAll('[data-jump]').forEach(function(b){ b.addEventListener('click', function(){ go(slides.indexOf(document.getElementById(b.dataset.jump))); }); });
+  document.querySelectorAll('.flip').forEach(function(m){ m.addEventListener('click', function(){ m.setAttribute('aria-expanded', m.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); }); });
+
+  // tema y pantalla completa
+  var root = document.documentElement;
+  try { var st = localStorage.getItem('temaSycamore'); if (st) root.dataset.theme = st; } catch(err) {}
+  document.getElementById('themeBtn').onclick = function(){
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('temaSycamore', root.dataset.theme); } catch(err) {}
+  };
+  function fullscreen(){ try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function(){}); else document.exitFullscreen().catch(function(){}); } catch(err) {} }
+  document.getElementById('fsBtn').onclick = fullscreen;
+
+  var h = parseInt((location.hash || '').replace('#',''), 10);
+  slides[0].classList.add('active'); go(h > 0 ? h-1 : 0);
+  window.addEventListener('hashchange', function(){ var n = parseInt(location.hash.replace('#',''), 10); if (n > 0 && n-1 !== cur) go(n-1); });
+})();
+</script>
+</body>
+</html>
